@@ -1,58 +1,51 @@
-'use script';
+'use strict';
 
-window.addEventListener('DOMContentLoaded', () => {
+const getData = async (url) => {
+	const res = await fetch(url); 
+	if (!res.ok) {
+		throw new Error(`Could not fetch ${url}, status: ${res.status}`);
+	}
+	return await res.json();
+};
 
-	const box = document.querySelector('.box'),
-		btn = document.querySelector('button');
-	//clentWidth и clientHeight не включают бордеры, полосу прокрутки6 однако включают паддинги
 
-	const width = box.clientWidth,
-		height = box.clientHeight; //мы получим только число, без пикселей
+class ListOfVideos {
+	constructor() {
+		this._list = [];
+	}
 
-	console.log(width, height);
+	set data(url) {
+		getData(url)
+		.then(data => {
+			const dateForFilter = new Date(2020, 9, 10);
+			for (let item of data.items) {
+				const dateVideoPublishedAt = new Date(item.contentDetails.videoPublishedAt);
+				if ((item.snippet.title.match(/javascript/i) || item.snippet.title.match(/python/i)) && !item.snippet.title.match(/basic/i) && this._list.length < 15 && item.snippet.title.match(/^[a-zA-Z0-9\s\\\'\"\!\@\#\$\%\^\&\,\.\=\/\?\+\_\*\;\:\`\~\{\}\[\]\(\)\'\-\|]*$/)) {
+					//экранировал все на всякий случай
+					if ((dateVideoPublishedAt.getTime() - dateForFilter.getTime()) > 0) {
+						this._list.push({...item.snippet, ...item.contentDetails});
+					}
+				}
+			}
+		}).then(() => {
+			this._list.sort(function(a, b) {
+				const dateA = a.videoPublishedAt;
+				const dateB = b.videoPublishedAt;
+				if (dateA > dateB) {
+					return -1;
+				} else if (dateA < dateB) {
+					return 1;
+				}
+			});
+		});
+	}
 
-	const offWidth = box.offsetWidth,
-		offHeight = box.offsetHeight;
+	get data() {
+		return this._list;
+	}
+}
 
-	//учитывают паддинги, полосу прокрутки и бордеры
+const newListOfVideos = new ListOfVideos();
+newListOfVideos.data = 'https://youtube.googleapis.com/youtube/v3/playlistItems?fields=items(snippet(title),contentDetails(videoPublishedAt))&part=snippet,contentDetails&maxResults=200&playlistId=PL5CaGd7qPVW8Paw3aSfAwpnnoqvGNwbdN&key=AIzaSyCDVgQiEkmFhoiLFJDRAZlMrPs2jHvvi8A';
 
-	console.log(offWidth, offHeight);
-	
-	const scrollHeight = box.scrollHeight; //есть и для ширины, если такая прокрутка есть.
-	// показывает высоту объекта вместе с прокручиваемой часть
-	//считает с учетом паддинга, но без бордера или марджина, без полосы прокрутки
-
-	console.log(scrollHeight);
-
-	btn.addEventListener('click', () => {
-		//box.style.height = scrollHeight + 4 + 'px';
-
-		console.log(box.scrollTop); //можно посмотреть на какую высоту отлистано
-	});
-
-	//чаще всего используется scrollTop или scrollLeft, по которым мы можем отслеживать скролл пользователя,
-	// особенно на странице и добавлять определенный контент
-
-	//также они могут быть модифицированы, в отличаи от других
-
-	console.log(box.getBoundingClientRect()); //можно получить координаты элемента, отступ верх, право, лево, размеры...
-	//right считается не с правого бока, а лево + ширина контента, аналогично и bottom
-
-	const style = window.getComputedStyle(box);
-	//для получения стилей, которые были применены к объекту, изменить таким образом нельзя, только получить
-
-	console.log(style.display); //можно получить такой стиль
-
-	//с js нельзя работать с псевдоэлементами, однако можно получить их стиль
-	// const style = window.getComputedStyle(box, тут указывается вторым  аргументом псевдолемент)
-
-	//computed стили формируются в css, а инлайн стили box.style - записываются в теги html
-	
-	console.log(document.documentElement.scrollTop);
-	console.log(document.documentElement.scrollHeight);
-	//можно получить высоту документа или количество пролистаных пикселей , просто так к документу обратится нельзя
-	//не забываем, их можно менять
-
-	window.scrollBy(0, 400); //скролит относительно текущего положение на указанное количество пикселей x and y
-	window.scrollTo(0, 400); //скролит до указанного положения, относительно всейй страницы
-});
+console.log(newListOfVideos.data);

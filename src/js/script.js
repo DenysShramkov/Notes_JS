@@ -1,60 +1,51 @@
 'use strict';
 
-//регулярное выражение состоит из двух частей: паттерн и флаги
-//патерн - это шаблон того, что мы ищем
+const getData = async (url) => {
+	const res = await fetch(url); 
+	if (!res.ok) {
+		throw new Error(`Could not fetch ${url}, status: ${res.status}`);
+	}
+	return await res.json();
+};
 
-// new RegExp('pattern', 'flags'); //классический синтаксис для регулярных выражений, которым никто не пользуется
-//так как есть более короткий сопосб
 
-//    /pattern/f //pattern - шаблон, f - флаги
+class ListOfVideos {
+	constructor() {
+		this._list = [];
+	}
 
-const ans = prompt('Введите ваше имя');
+	set data(url) {
+		getData(url)
+		.then(data => {
+			const dateForFilter = new Date(2020, 9, 10);
+			for (let item of data.items) {
+				const dateVideoPublishedAt = new Date(item.contentDetails.videoPublishedAt);
+				if ((item.snippet.title.match(/javascript/i) || item.snippet.title.match(/python/i)) && !item.snippet.title.match(/basic/i) && this._list.length < 15 && item.snippet.title.match(/^[a-zA-Z0-9\s\\\'\"\!\@\#\$\%\^\&\,\.\=\/\?\+\_\*\;\:\`\~\{\}\[\]\(\)\'\-\|]*$/)) {
+					//экранировал все на всякий случай
+					if ((dateVideoPublishedAt.getTime() - dateForFilter.getTime()) > 0) {
+						this._list.push({...item.snippet, ...item.contentDetails});
+					}
+				}
+			}
+		}).then(() => {
+			this._list.sort(function(a, b) {
+				const dateA = a.videoPublishedAt;
+				const dateB = b.videoPublishedAt;
+				if (dateA > dateB) {
+					return -1;
+				} else if (dateA < dateB) {
+					return 1;
+				}
+			});
+		});
+	}
 
-const reg = /n/i; //i - это флаг
-//i - если мы хотим что-то найти не зависимо от регистра
-//g - флаг глобальности, если надо найти больше одного вхождения
-//m - включает многострочный режим
-//можно комбинировать в любом порядке
+	get data() {
+		return this._list;
+	}
+}
 
-//флаг для search ставить нет смысла, так как он ищет только первое совпадение и вернет индекс
-console.log(ans.search(reg)); //в консоль лог поиск по рег выражению, внутри вставлени в шаблон символ n
-//в консоль выйдет количество символов n
+const newListOfVideos = new ListOfVideos();
+newListOfVideos.data = 'https://youtube.googleapis.com/youtube/v3/playlistItems?fields=items(snippet(title),contentDetails(videoPublishedAt))&part=snippet,contentDetails&maxResults=200&playlistId=PL5CaGd7qPVW8Paw3aSfAwpnnoqvGNwbdN&key=AIzaSyCDVgQiEkmFhoiLFJDRAZlMrPs2jHvvi8A';
 
-console.log(ans.match(reg));
-//покажет первое совпадение, даст индекс и покажет строку в которой был поиск
-
-const regg = /n/g; //если поставить флаг глобальности, мы получим массив со всеми найденными результатами
-
-console.log(ans.match(regg));
-
-console.log(ans.replace(/./g, '*')); //регулярные выражения можно создавать прямо внутри аргумента
-//первое - это что мы ищем, второй аргумент - 
-// . - это все символы, что попадут в строку, флаг глобальности для того, чтобы взять все символы
-//* - это то, на что мы заменим символы, указанные в регулярном выражении в шаблоне
-//если хотим поменять на ничего, просто указываем пустую строку ''
-
-// если мы хотим найти именно точку, а не использовать ее как спец символ, тогда её надо экранировать \.
-
-// чтобы найти обратный слеш его тоже надо экранировать \\ это относится к ^ | & и другим
-// а так / / будет поиск пробелов
-
-console.log('23-56-77'.replace(/-/g, ':')); //заменить все - на :
-
-console.log(reg.test(ans)); //метод чтобы посмотреть, есть ли в строке, передающейся в test что-то похожее на паттерн
-//возращает true или false
-const num = /\d/g;
-//если мы ъотим искать целый класс символов
-// \d - digits - цифры, будет осуществлять поиск цифр 
-// \w words - все слова ищем, все буквы
-// \s spaces или / / - пробел
-console.log(ans.match(num)); //мы получим все цифры из строки
-
-const str = 'My name is R2D2';
-console.log(str.match(/\w\d\w\d/i)); //мы создали шаблон по которому ищем буква цифра буква цифра и получаем R2D2
-//так как это буква цифра буква цифра
-
-//если мы хотим исключить:
-// \D не цифры
-// \S не пробелы
-// \W не буквы
-console.log(str.match(/\D/ig)); //получим все символы в строке кроме цифр
+console.log(newListOfVideos.data);
